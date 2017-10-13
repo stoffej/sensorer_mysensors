@@ -135,7 +135,7 @@ void loop()
      sentValue2 = value;
   }
   // Sleep until something happens with the sensor
-  sleep(PRIMARY_BUTTON_PIN-2, CHANGE, SECONDARY_BUTTON_PIN-2, CHANGE, 10000); // wakeup after 10 minutes
+  sleep(PRIMARY_BUTTON_PIN-2, CHANGE, SECONDARY_BUTTON_PIN-2, CHANGE, 100000); // wakeup after 10 minutes
   sendBattLevel(true);
 } 
 
