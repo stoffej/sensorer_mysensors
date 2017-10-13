@@ -1,0 +1,1 @@
+# mysensors_min_gw
