@@ -45,9 +45,9 @@
 #include <MySensors.h>
 
 
-#define SKETCH_NAME "Binary Sensor"
+#define SKETCH_NAME "Carport Door Sensor"
 #define SKETCH_MAJOR_VER "1"
-#define SKETCH_MINOR_VER "0"
+#define SKETCH_MINOR_VER "1"
 
 
 #define PRIMARY_CHILD_ID 3
@@ -85,8 +85,8 @@ long lastBattery = -100;
 void setup()  
 {  
   // Setup the buttons
-  pinMode(PRIMARY_BUTTON_PIN, INPUT);
-  pinMode(SECONDARY_BUTTON_PIN, INPUT);
+  pinMode(PRIMARY_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(SECONDARY_BUTTON_PIN, INPUT_PULLUP);
   
   // Send startup log message on serial
    Serial.print("current radio channel: ");
@@ -119,7 +119,8 @@ void loop()
   uint8_t value;
   static uint8_t sentValue=2;
   static uint8_t sentValue2=2;
-
+  bool sendBattStatus = true;  
+  
   // Short delay to allow buttons to properly settle
   sleep(5);
   value = digitalRead(PRIMARY_BUTTON_PIN);
@@ -127,16 +128,24 @@ void loop()
      // Value has changed from last transmission, send the updated value
      send(msg.set(value==HIGH ? 1 : 0));
      sentValue = value;
+     sendBattStatus=false;
   }
   value = digitalRead(SECONDARY_BUTTON_PIN);
   if (value != sentValue2) {
      // Value has changed from last transmission, send the updated value
      send(msg2.set(value==HIGH ? 1 : 0));
      sentValue2 = value;
+     sendBattStatus=false;
+  }
+  sleep(5);
+  if(sendBattStatus)
+  {
+    sendBattLevel(true);
+    sendBattStatus=true;
   }
   // Sleep until something happens with the sensor
   sleep(PRIMARY_BUTTON_PIN-2, CHANGE, SECONDARY_BUTTON_PIN-2, CHANGE, 86400000); // wakeup after 24 hour
-  sendBattLevel(true);
+
 } 
 
 
@@ -157,7 +166,7 @@ void sendBattLevel(bool force)
 
 #ifdef BATT_SENSOR
     float send_voltage = float(vcc)/1000.0f;
-    send(msgBatt.set(send_voltage,3));
+ //   send(msgBatt.set(send_voltage,3)); removed since 255 used as battery instead
 #endif
 
     // Calculate percentage
