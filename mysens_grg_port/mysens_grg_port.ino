@@ -119,33 +119,29 @@ void loop()
   uint8_t value;
   static uint8_t sentValue=2;
   static uint8_t sentValue2=2;
-  bool sendBattStatus = true;  
+  
   
   // Short delay to allow buttons to properly settle
-  sleep(5);
+  sleep(20);
   value = digitalRead(PRIMARY_BUTTON_PIN);
   if (value != sentValue) {
      // Value has changed from last transmission, send the updated value
      send(msg.set(value==HIGH ? 1 : 0));
      sentValue = value;
-     sendBattStatus=false;
+  
   }
   value = digitalRead(SECONDARY_BUTTON_PIN);
   if (value != sentValue2) {
      // Value has changed from last transmission, send the updated value
      send(msg2.set(value==HIGH ? 1 : 0));
      sentValue2 = value;
-     sendBattStatus=false;
-  }
-  sleep(5);
-  if(sendBattStatus)
-  {
-    sendBattLevel(true);
-    sendBattStatus=true;
-  }
+    }
+  
   // Sleep until something happens with the sensor
-  sleep(PRIMARY_BUTTON_PIN-2, CHANGE, SECONDARY_BUTTON_PIN-2, CHANGE, 86400000); // wakeup after 24 hour
-
+  if(sleep(PRIMARY_BUTTON_PIN-2, CHANGE, SECONDARY_BUTTON_PIN-2, CHANGE, 86400000) < 0) // wakeup after 24 hour
+{
+  sendBattLevel(true);
+}
 } 
 
 
