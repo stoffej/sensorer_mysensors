@@ -57,14 +57,13 @@
 
 #define DWELL_TIME 40  // this allows for radio to come back to power after a transmission, ideally 0 
 
-//#define DEBUG_ON  // Rain gauge specific debug messages. 
-#define DHT_ON // uncomment out this line to enable DHT sensor
-#define LUX_ON // uncomment out this line to enable BH1750 sensor
+#define DEBUG_ON  // Rain gauge specific debug messages. 
+
 //#define USE_DAILY // Uncomment to display individual daily rainfall totals in the variables sent to your controller. If it's commented it will add each day to the next for a cumulative total.
 
 #define TIP_SENSOR_PIN 3
 #define CALIBRATE_FACTOR 60 // amount of rain per rain bucket tip e.g. 5 is .05mm
-#define DHT_LUX_DELAY 300000  //Delay in milliseconds that the DHT and LUX sensors will wait before sending data
+
 
 #define CHILD_ID_RAIN_LOG 3  // Keeps track of accumulated rainfall
 #define CHILD_ID_TRIPPED_INDICATOR 4  // Indicates Tripped when rain detected
@@ -94,31 +93,9 @@ MyMessage msgRainVAR5(CHILD_ID_RAIN_LOG, V_VAR5);
 MyMessage msgTripped(CHILD_ID_TRIPPED_INDICATOR, V_TRIPPED);
 MyMessage msgTrippedVar1(CHILD_ID_TRIPPED_INDICATOR, V_VAR1);
 MyMessage msgTrippedVar2(CHILD_ID_TRIPPED_INDICATOR, V_VAR2);
-//
-#ifdef DHT_ON
-  #include <DHT.h>
-  #define CHILD_ID_HUM 0
-  #define CHILD_ID_TEMP 1
-  #define HUMIDITY_SENSOR_DIGITAL_PIN 8
-  DHT dht;
-  float lastTemp;
-  float lastHum;
-  bool metric = true;
-  MyMessage msgHum(CHILD_ID_HUM, V_HUM);
-  MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
-#endif
-//
-#ifdef LUX_ON
-  //BH1750 is connected to SCL (analog input A5) and SDA (analog input A4)
-  #include <BH1750.h>
-  #include <Wire.h>
-  #define CHILD_ID_LIGHT 2
-  BH1750 lightSensor;
-  MyMessage msg(CHILD_ID_LIGHT, V_LIGHT_LEVEL);
-  uint16_t lastlux;
-  uint8_t heartbeat = 10; //Used to send the light lux to gateway as soon as the device is restarted and after the DHT_LUX_DELAY has happened 10 times
-#endif
-unsigned long sensorPreviousMillis;
+
+
+
 uint8_t eepromIndex;
 uint8_t tipSensorPin = 3; // Pin the tipping bucket is connected to. Must be interrupt capable pin
 uint8_t ledPin = 5; // Pin the LED is connected to.  PWM capable pin required
@@ -328,16 +305,7 @@ void loop()
     DEBUG_PRINTLN(F("Sending rainRate is 0 to controller"));
     lastHour = hour();
   }
-  if (millis() - sensorPreviousMillis > DHT_LUX_DELAY)
-  {
-    #ifdef DHT_ON  //DHT Code
-      doDHT();
-    #endif
-    #ifdef LUX_ON
-      doLUX();
-    #endif
-    sensorPreviousMillis = millis();
-  }
+
 }
 //
 
