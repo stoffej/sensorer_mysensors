@@ -46,7 +46,7 @@
 
 //#define MY_RF24_PA_LEVEL RF24_PA_MAX //Options: RF24_PA_MIN, RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX
 
-//#define MY_NODE_ID 7 //uncomment this line to assign a static ID
+#define MY_NODE_ID 30 //uncomment this line to assign a static ID
 
 #include <math.h>
 #include <TimeLib.h>
@@ -59,10 +59,13 @@
 
 #define DEBUG_ON  // Rain gauge specific debug messages. 
 
-//#define USE_DAILY // Uncomment to display individual daily rainfall totals in the variables sent to your controller. If it's commented it will add each day to the next for a cumulative total.
+#define USE_DAILY // Uncomment to display individual daily rainfall totals in the variables sent to your controller. If it's commented it will add each day to the next for a cumulative total.
 
 #define TIP_SENSOR_PIN 3
-#define CALIBRATE_FACTOR 60 // amount of rain per rain bucket tip e.g. 5 is .05mm
+#define CALIBRATE_FACTOR 36 // amount of rain per rain bucket tip e.g. 5 is .05mm
+
+// Sensor manufacturer has sent information about the sensor. 0.3 mm to 1 tick
+// MI-SOL Rain Guage has CALIBRATE_FACTOR = 36
 
 
 #define CHILD_ID_RAIN_LOG 3  // Keeps track of accumulated rainfall
