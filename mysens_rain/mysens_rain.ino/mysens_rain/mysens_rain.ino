@@ -503,10 +503,11 @@ void slowFlash(void)
 {
   static bool ledState = true;
   static unsigned long pulseStart = millis();
-  if (millis() - pulseStart < 100UL)
+  if (millis() - pulseStart < 250UL)
   {
-    digitalWrite(ledPin, !ledState);
+    digitalWrite(ledPin, ledState);
     pulseStart = millis();
+    ledState != ledState;
   }
 }
 
