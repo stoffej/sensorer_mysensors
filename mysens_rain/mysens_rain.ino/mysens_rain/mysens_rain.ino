@@ -58,16 +58,15 @@
 #define DWELL_TIME 40  // this allows for radio to come back to power after a transmission, ideally 0 
 
 #define DEBUG_ON  // Rain gauge specific debug messages. 
-
-#define USE_DAILY // Uncomment to display individual daily rainfall totals in the variables sent to your controller. If it's commented it will add each day to the next for a cumulative total.
+//#define DHT_ON // uncomment out this line to enable DHT sensor
+//#define LUX_ON // uncomment out this line to enable BH1750 sensor
+//#define USE_DAILY // Uncomment to display individual daily rainfall totals in the variables sent to your controller. If it's commented it will add each day to the next for a cumulative total.
 
 #define TIP_SENSOR_PIN 3
-#define CALIBRATE_FACTOR 36 // amount of rain per rain bucket tip e.g. 5 is .05mm
+#define CALIBRATE_FACTOR 60 // amount of rain per rain bucket tip e.g. 5 is .05mm
+#define DHT_LUX_DELAY 300000  //Delay in milliseconds that the DHT and LUX sensors will wait before sending data
 
-// Sensor manufacturer has sent information about the sensor. 0.3 mm to 1 tick
-// MI-SOL Rain Guage has CALIBRATE_FACTOR = 36
-
-
+ 
 #define CHILD_ID_RAIN_LOG 3  // Keeps track of accumulated rainfall
 #define CHILD_ID_TRIPPED_INDICATOR 4  // Indicates Tripped when rain detected
 #define EEPROM_BUFFER_LOCATION 0  // location of the EEPROM circular buffer
@@ -96,9 +95,31 @@ MyMessage msgRainVAR5(CHILD_ID_RAIN_LOG, V_VAR5);
 MyMessage msgTripped(CHILD_ID_TRIPPED_INDICATOR, V_TRIPPED);
 MyMessage msgTrippedVar1(CHILD_ID_TRIPPED_INDICATOR, V_VAR1);
 MyMessage msgTrippedVar2(CHILD_ID_TRIPPED_INDICATOR, V_VAR2);
-
-
-
+//
+#ifdef DHT_ON
+  #include <DHT.h>
+  #define CHILD_ID_HUM 0
+  #define CHILD_ID_TEMP 1
+  #define HUMIDITY_SENSOR_DIGITAL_PIN 8
+  DHT dht;
+  float lastTemp;
+  float lastHum;
+  bool metric = true;
+  MyMessage msgHum(CHILD_ID_HUM, V_HUM);
+  MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
+#endif
+//
+#ifdef LUX_ON
+  //BH1750 is connected to SCL (analog input A5) and SDA (analog input A4)
+  #include <BH1750.h>
+  #include <Wire.h>
+  #define CHILD_ID_LIGHT 2
+  BH1750 lightSensor;
+  MyMessage msg(CHILD_ID_LIGHT, V_LIGHT_LEVEL);
+  uint16_t lastlux;
+  uint8_t heartbeat = 10; //Used to send the light lux to gateway as soon as the device is restarted and after the DHT_LUX_DELAY has happened 10 times
+#endif
+unsigned long sensorPreviousMillis;
 uint8_t eepromIndex;
 uint8_t tipSensorPin = 3; // Pin the tipping bucket is connected to. Must be interrupt capable pin
 uint8_t ledPin = 5; // Pin the LED is connected to.  PWM capable pin required
@@ -131,7 +152,17 @@ void presentation()  {
   present(CHILD_ID_TRIPPED_INDICATOR, S_MOTION);
   wait(DWELL_TIME);
 
+#ifdef DHT_ON
+  present(CHILD_ID_HUM, S_HUM);
+  wait(DWELL_TIME);
+  present(CHILD_ID_TEMP, S_TEMP);
+  wait(DWELL_TIME);
+#endif
 
+
+#ifdef LUX_ON
+  present(CHILD_ID_LIGHT, S_LIGHT_LEVEL);
+#endif
 
   DEBUG_PRINTLN(F("Sensor Presentation Complete"));
 }
@@ -200,7 +231,16 @@ void setup()
   wait(DWELL_TIME);
   request(CHILD_ID_TRIPPED_INDICATOR, V_VAR2);
   wait(DWELL_TIME);
-
+  //
+#ifdef DHT_ON
+  dht.setup(HUMIDITY_SENSOR_DIGITAL_PIN);
+  metric = getControllerConfig().isMetric;  
+  wait(DWELL_TIME);
+#endif
+  //
+#ifdef LUX_ON
+  lightSensor.begin();
+#endif
   //
   transmitRainData(); //Setup complete send any data loaded from eeprom to gateway
 }
@@ -308,12 +348,70 @@ void loop()
     DEBUG_PRINTLN(F("Sending rainRate is 0 to controller"));
     lastHour = hour();
   }
-
+  if (millis() - sensorPreviousMillis > DHT_LUX_DELAY)
+  {
+    #ifdef DHT_ON  //DHT Code
+      doDHT();
+    #endif
+    #ifdef LUX_ON
+      doLUX();
+    #endif
+    sensorPreviousMillis = millis();
+  }
 }
 //
-
+#ifdef DHT_ON
+void doDHT(void)
+{
+  float temperature = dht.getTemperature();
+    if (isnan(temperature)) 
+    {
+      DEBUG_PRINTLN(F("Failed reading temperature from DHT"));
+    } else if (temperature != lastTemp) 
+    {
+      lastTemp = temperature;
+      if (!metric) 
+      {
+        temperature = dht.toFahrenheit(temperature);
+      }
+      send(msgTemp.set(temperature, 1));
+      wait(DWELL_TIME);
+      DEBUG_PRINT(F("Temperature is: "));
+      DEBUG_PRINTLN(temperature);
+    }
+    float humidity = dht.getHumidity();;
+    if (isnan(humidity)) 
+    {
+      DEBUG_PRINTLN(F("Failed reading humidity from DHT"));
+    } else if (humidity != lastHum) 
+    {
+      lastHum = humidity;
+      send(msgHum.set(humidity, 1));
+      wait(DWELL_TIME);
+      DEBUG_PRINT(F("Humidity is: "));
+      DEBUG_PRINTLN(humidity);
+    }
+}
+#endif
 //
-
+#ifdef LUX_ON
+void doLUX(void)
+{
+  uint16_t lux = lightSensor.readLightLevel();// Get Lux value
+  DEBUG_PRINT(F("Current LUX Level: "));
+  DEBUG_PRINTLN(lux);
+  heartbeat++;
+  if (lux != lastlux || heartbeat > 10) 
+  {
+    send(msg.set(lux));
+    lastlux = lux;
+  }
+  if (heartbeat > 10) 
+  {
+    heartbeat = 0;
+  }
+}
+#endif
 //
 void sensorTipped()
 {
@@ -325,21 +423,14 @@ void sensorTipped()
   }
   lastTipTime = thisTipTime;
 }
-
+//
 uint32_t rainTotal(uint8_t hours)
 {
-  DEBUG_PRINT(F("stoffe ******** rainTotal"));
   uint32_t total = 0;
   for (uint8_t i = 0; i <= hours; i++)
   {
-    DEBUG_PRINT(F("i= "));
-    DEBUG_PRINTLN(i);
-    DEBUG_PRINT(F("rainBucket [i]="));
-    DEBUG_PRINTLN(rainBucket[i]);
     total += rainBucket [i];
   }
-  DEBUG_PRINT(F("total = "));
-  DEBUG_PRINTLN(total);
   return total;
 }
 
@@ -510,11 +601,11 @@ void slowFlash(void)
 {
   static bool ledState = true;
   static unsigned long pulseStart = millis();
-  if (millis() - pulseStart < 250UL)
+  if (millis() - pulseStart > 1000UL)
   {
-    digitalWrite(ledPin, ledState);
+    digitalWrite(ledPin, !ledState);
     pulseStart = millis();
-    ledState != ledState;
+    ledState = !ledState;
   }
 }
 
