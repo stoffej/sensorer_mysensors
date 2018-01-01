@@ -325,14 +325,21 @@ void sensorTipped()
   }
   lastTipTime = thisTipTime;
 }
-//
+
 uint32_t rainTotal(uint8_t hours)
 {
+  DEBUG_PRINT(F("stoffe ******** rainTotal"));
   uint32_t total = 0;
   for (uint8_t i = 0; i <= hours; i++)
   {
+    DEBUG_PRINT(F("i= "));
+    DEBUG_PRINTLN(i);
+    DEBUG_PRINT(F("rainBucket [i]="));
+    DEBUG_PRINTLN(rainBucket[i]);
     total += rainBucket [i];
   }
+  DEBUG_PRINT(F("total = "));
+  DEBUG_PRINTLN(total);
   return total;
 }
 
