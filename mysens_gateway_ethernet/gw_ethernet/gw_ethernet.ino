@@ -100,7 +100,7 @@
 //#define MY_INCLUSION_MODE_BUTTON_PIN  3
 
 // Set blinking period
-#define MY_DEFAULT_LED_BLINK_PERIOD 300
+#define MY_DEFAULT_LED_BLINK_PERIOD 800
 
 // Flash leds on rx/tx/err
 // Uncomment to override default HW configurations
