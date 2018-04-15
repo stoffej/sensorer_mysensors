@@ -61,6 +61,7 @@ unsigned long oldPulseCount = 0;
 unsigned long oldWatt = 0;
 double oldKwh;
 unsigned long lastSend;
+unsigned retryCounter=0;
 MyMessage wattMsg(CHILD_ID,V_WATT);
 MyMessage kwhMsg(CHILD_ID,V_KWH);
 MyMessage pcMsg(CHILD_ID,V_VAR1);
@@ -81,7 +82,7 @@ void setup()
 
 void presentation() {
   // Send the sketch version information to the gateway and Controller
-  sendSketchInfo("Energy Meter", "1.0");
+  sendSketchInfo("Energy Meter", "1.1");
 
   // Register this device as power sensor
   present(CHILD_ID, S_POWER);
@@ -118,6 +119,15 @@ void loop()
     lastSend = now;
   } else if (sendTime && !pcReceived) {
     // No count received. Try requesting it again
+    if(retryCounter >=0)
+    {
+      pcReceived = true;
+    }
+    else
+    {
+     retryCounter ++;   
+    }
+    
     request(CHILD_ID, V_VAR1);
     lastSend=now;
   }
