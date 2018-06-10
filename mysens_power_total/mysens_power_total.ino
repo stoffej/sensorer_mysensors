@@ -119,7 +119,7 @@ void loop()
     lastSend = now;
   } else if (sendTime && !pcReceived) {
     // No count received. Try requesting it again
-    if(retryCounter >=0)
+    if(retryCounter >=2)
     {
       pcReceived = true;
     }
