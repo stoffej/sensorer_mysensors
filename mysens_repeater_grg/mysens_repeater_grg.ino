@@ -43,13 +43,13 @@
 //#define MY_LEDS_BLINKING_FEATURE
 
 // 
-#define MY_WITH_LEDS_BLINKING_INVERSE
+//#define MY_WITH_LEDS_BLINKING_INVERSE
 // Set blinking period (in milliseconds)
 #define MY_DEFAULT_LED_BLINK_PERIOD 300
 
-#define MY_DEFAULT_ERR_LED_PIN 4
-#define MY_DEFAULT_TX_LED_PIN 5
-#define MY_DEFAULT_RX_LED_PIN 6
+#define MY_DEFAULT_ERR_LED_PIN 2
+#define MY_DEFAULT_TX_LED_PIN 3
+#define MY_DEFAULT_RX_LED_PIN 4
 
 
 #include <SPI.h>
