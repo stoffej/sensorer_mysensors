@@ -49,7 +49,7 @@ void setup() {
 void presentation()  
 {  
   //Send the sensor node sketch version information to the gateway
-  sendSketchInfo("Repeater Node TV bank", "1.0");
+  sendSketchInfo("Repeater Node TV bank", "1.1");
 }
 
 void loop() 
