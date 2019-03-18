@@ -75,7 +75,7 @@
 // Enable to UDP
 //#define MY_USE_UDP
 
-//#define MY_IP_ADDRESS 192,168,178,66   // If this is disabled, DHCP is used to retrieve address
+#define MY_IP_ADDRESS 192,168,1,80   // If this is disabled, DHCP is used to retrieve address
 // Renewal period if using DHCP
 //#define MY_IP_RENEWAL_INTERVAL 60000
 // The port to keep open on node server mode / or port to contact in client mode
