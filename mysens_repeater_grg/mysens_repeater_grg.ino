@@ -62,7 +62,7 @@ void setup() {
 void presentation()  
 {  
   //Send the sensor node sketch version information to the gateway
-  sendSketchInfo("Repeater Node garage", "1.0");
+  sendSketchInfo("Repeater Node garage", "1.1");
 }
 
 void loop() 
