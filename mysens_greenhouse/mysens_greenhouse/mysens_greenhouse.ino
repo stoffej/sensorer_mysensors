@@ -32,6 +32,31 @@
 #include <Wire.h>
 #include <hd44780.h>                       // main hd44780 header
 #include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
+// Enable debug prints to serial monitor
+#define MY_DEBUG 
+
+
+// Enable and select radio type attached
+#define MY_RADIO_RF24
+//#define MY_RADIO_RFM69
+#define MY_NODE_ID 16
+
+#include <SPI.h>
+#include <MySensors.h>
+
+
+
+#define SKETCH_NAME "Greenhouse"
+#define SKETCH_MAJOR_VER "0"
+#define SKETCH_MINOR_VER "1"
+
+
+#define PRIMARY_CHILD_ID 3
+
+
+
+MyMessage msg(PRIMARY_CHILD_ID, V_TRIPPED);
+uint8_t value=1;
 
 hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip
 
@@ -63,6 +88,11 @@ const int LCD_ROWS = 2;
 
 void setup()
 {
+
+
+    // Send startup log message on serial
+   Serial.print("current radio channel: ");
+   Serial.println(MY_RF24_CHANNEL);
 int status;
 
 	// initialize LCD with number of columns and rows: 
@@ -96,4 +126,20 @@ int status;
   lcd.print(" 40%");
 }
 
-void loop() {}
+void presentation() {
+  // Send the sketch version information to the gateway and Controller
+  sendSketchInfo(SKETCH_NAME, SKETCH_MAJOR_VER "." SKETCH_MINOR_VER);
+
+  // Register binary input sensor to sensor_node (they will be created as child devices)
+  // You can use S_DOOR, S_MOTION or S_LIGHT here depending on your usage. 
+  // If S_LIGHT is used, remember to update variable type you send in. See "msg" above.
+  present(PRIMARY_CHILD_ID, S_DOOR);  
+  
+}
+
+void loop() 
+{
+     value=!value;
+   send(msg.set(value));
+   sleep(5000);
+}
