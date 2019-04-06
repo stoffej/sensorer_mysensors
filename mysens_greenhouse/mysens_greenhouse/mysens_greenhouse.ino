@@ -48,17 +48,25 @@
 
 #define SKETCH_NAME "Greenhouse"
 #define SKETCH_MAJOR_VER "0"
-#define SKETCH_MINOR_VER "1"
+#define SKETCH_MINOR_VER "2"
 
 
-#define PRIMARY_CHILD_ID 3
+#define CHILD_ID_HUM 0
+#define CHILD_ID_TEMP 1
+#define CHILD_ID_
+
+// Sleep time between sensor updates (in milliseconds)
+// Must be >1000ms for DHT22 and >2000ms for DHT11
+static const uint64_t UPDATE_INTERVAL = 60000;
+
+MyMessage msgHum(CHILD_ID_HUM, V_HUM);
+MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 
 
-
-MyMessage msg(PRIMARY_CHILD_ID, V_TRIPPED);
 uint8_t value=1;
 
 hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip
+bool metric = true;
 
 // If you wish to use an i/o expander at a specific address, you can specify the
 // i2c address and let the library auto configure it. If you don't specify
@@ -93,7 +101,7 @@ void setup()
     // Send startup log message on serial
    Serial.print("current radio channel: ");
    Serial.println(MY_RF24_CHANNEL);
-int status;
+   int status;
 
 	// initialize LCD with number of columns and rows: 
 	// hd44780 returns a status from begin() that can be used
@@ -133,13 +141,20 @@ void presentation() {
   // Register binary input sensor to sensor_node (they will be created as child devices)
   // You can use S_DOOR, S_MOTION or S_LIGHT here depending on your usage. 
   // If S_LIGHT is used, remember to update variable type you send in. See "msg" above.
-  present(PRIMARY_CHILD_ID, S_DOOR);  
+  present(CHILD_ID_HUM, S_HUM);
+  present(CHILD_ID_TEMP, S_TEMP);
   
+  metric = getControllerConfig().isMetric;
 }
 
 void loop() 
 {
-     value=!value;
-   send(msg.set(value));
+   float humidity = 30.0;
+   float temperature = 15;
+
+   send(msgHum.set(humidity, 1));
+   send(msgTemp.set(temperature, 1));
+
+
    sleep(5000);
 }
