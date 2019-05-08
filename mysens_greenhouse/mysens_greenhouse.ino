@@ -21,6 +21,10 @@
 #define CHILD_ID_TEMP 1
 #define CHILD_ID_LIGHT 2
 #define CHILD_ID_RELAY 3
+#define CHILD_ID_SOIL1 8
+#define CHILD_ID_SOIL2 9
+#define CHILD_ID_SOIL3 10
+
 
 #define RELAY_PIN 7  // Arduino Digital I/O pin number for first relay (second on pin+1 etc)
 
@@ -32,9 +36,12 @@ static const uint64_t UPDATE_INTERVAL = 60000;
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 MyMessage msgLight(CHILD_ID_LIGHT, V_LEVEL);
-
 MyMessage msgPrefix(CHILD_ID_LIGHT, V_UNIT_PREFIX);  //custom unit for light sensor
-MyMessage msgRelay(CHILD_ID_RELAY, V_STATUS);  //custom unit for light sensor
+MyMessage msgRelay(CHILD_ID_RELAY, V_STATUS);  
+
+MyMessage msgSoil1(CHILD_ID_SOIL1, V_LEVEL);  
+MyMessage msgSoil2(CHILD_ID_SOIL2, V_LEVEL);  
+MyMessage msgSoil3(CHILD_ID_SOIL3, V_LEVEL);  
 
 
 uint8_t value=1;
@@ -46,7 +53,7 @@ DHT dht; //DHT22 på pinne 5
 const int LCD_COLS = 16;
 const int LCD_ROWS = 2;
 bool metric = true;
-
+int relay_state;
 
 void before()
 {
@@ -71,8 +78,8 @@ void setup()
 	 }
    dht.setup(5); // data pin 5
   send(msgPrefix.set("lux"));        //light sensor setup for home assistant... unit presented is lux
-  int state=loadState(CHILD_ID_RELAY)?1:0;
-  send(msgRelay.set(state),state);
+  relay_state=loadState(CHILD_ID_RELAY);
+  send(msgRelay.set(relay_state),relay_state);
 }
 
 void presentation() 
@@ -84,6 +91,12 @@ void presentation()
   present(CHILD_ID_HUM, S_HUM);
   present(CHILD_ID_TEMP, S_TEMP);
   present(CHILD_ID_RELAY, S_SPRINKLER);
+  present(CHILD_ID_SOIL1, S_MOISTURE);
+  present(CHILD_ID_SOIL2, S_MOISTURE);
+  present(CHILD_ID_SOIL3, S_MOISTURE);
+  
+  
+  
   
   metric = getControllerConfig().isMetric;
 
@@ -101,9 +114,23 @@ void loop()
   send(msgHum.set(humidity, 1));
   send(msgTemp.set(temperature, 1));
   send(msgLight.set(lux));
-  int state=loadState(CHILD_ID_RELAY)?1:0;
-  send(msgRelay.set(state),state);
+  relay_state=loadState(CHILD_ID_RELAY);
+  send(msgRelay.set(relay_state),relay_state);
+
+  int analogValue = analogRead(CHILD_ID_SOIL1);
+  int moisture = map(analogValue, 0, 1023, 0, 100);
+  send(msgSoil1.set(20));
+  wait(2000);
+  analogValue = analogRead(CHILD_ID_SOIL2);
+  moisture = map(analogValue, 0, 1023, 0, 100);
+  send(msgSoil2.set(25));
+  wait(2000);
+  analogValue = analogRead(CHILD_ID_SOIL3);
+  moisture = map(analogValue, 0, 1023, 0, 100);
+  send(msgSoil3.set(30));
+  wait(2000);
   lcd.setCursor(0,0);
+  lcd.clear();
   lcd.print("Hi Greenhouse :)");
   lcd.setCursor(0, 1);
   lcd.print(temperature,0);
@@ -113,8 +140,8 @@ void loop()
   lcd.print("%");
   lcd.print(" ");
   lcd.print(lux);
-  lcd.print("lx");
-  sleep(5000);
+  lcd.print(" lux");
+  wait(1000);
 }
 
 void receive(const MyMessage &message)
@@ -123,15 +150,15 @@ void receive(const MyMessage &message)
     // We only expect one type of message from controller. But we better check anyway.
     if (message.type==V_STATUS) {
         // Change relay state
-        int state1 = message.getBool();                 
-        send(msgRelay.set(state1), state1);
-        digitalWrite(RELAY_PIN, state1);
+        relay_state = message.getInt();                 
+        digitalWrite(RELAY_PIN, relay_state );
         // Store state in eeprom
-        saveState(message.sensor, state1);
+        saveState(CHILD_ID_RELAY, relay_state);
         // Write some debug info
-    
-        Serial.print(message.sensor);
         Serial.print(", New status: ");
-        Serial.println(state1);
+        Serial.println(relay_state );
+        Serial.print("message=");
+        
+        Serial.println(message.sensor);
     }
 }
