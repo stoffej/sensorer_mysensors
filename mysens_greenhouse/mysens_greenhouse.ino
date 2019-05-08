@@ -119,15 +119,15 @@ void loop()
 
   int analogValue = analogRead(CHILD_ID_SOIL1);
   int moisture = map(analogValue, 0, 1023, 0, 100);
-  send(msgSoil1.set(20));
+  send(msgSoil1.set(moisture));
   wait(2000);
   analogValue = analogRead(CHILD_ID_SOIL2);
   moisture = map(analogValue, 0, 1023, 0, 100);
-  send(msgSoil2.set(25));
+  send(msgSoil2.set(moisture));
   wait(2000);
   analogValue = analogRead(CHILD_ID_SOIL3);
   moisture = map(analogValue, 0, 1023, 0, 100);
-  send(msgSoil3.set(30));
+  send(msgSoil3.set(moisture));
   wait(2000);
   lcd.setCursor(0,0);
   lcd.clear();
