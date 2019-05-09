@@ -35,7 +35,7 @@
 //#define CHILD_ID_SOILC 10
 
 #define DHT_UPDATE_INTERVAL  4000 // in milliseconds
-#define WATER_PUMP_TIMEOUT   5000 // 
+#define WATER_PUMP_TIMEOUT   15000 // 
 
 #define RELAY_PIN 7  // Arduino Digital I/O pin number for first relay (second on pin+1 etc)
 
@@ -60,10 +60,11 @@ static unsigned long watchdogTimeout;
 float humidity = 255;
 float temperature = 255;
 uint16_t lux = 65535 ;
-int moistureA = 32000; 
+int moistureA = 32000;
 int moistureB = 32000;
 //int moistureC = 32000;
 
+int rawA;
 
 enum State {
   Init,  Watering,  Idle,  Error
@@ -210,17 +211,19 @@ void updateDisplay(void)
     else
     {
       lcd.write(byte(2));    
+      lcd.print("  raw:");
+      lcd.print(rawA);
     }
     
     lcd.setCursor(0, 1);
     lcd.print(temperature,0);
     lcd.print((char)223);
     lcd.print(" ");
-    lcd.print(humidity,0);
+    lcd.print(moistureA);
     lcd.print("%");
     lcd.print(" ");
     lcd.print(lux);
-    lcd.print(" lux");    
+       
     lastUpdateLcdTime = millis();
   }
 }
@@ -297,7 +300,8 @@ void readSensors(void)
     lastSoilUpdateTime = millis();
     DEBUG_PRINT("STOFFE ANALOG");
     int analogValue = analogRead(3);
-    moistureA = map(analogValue, 0, 1023, 0, 100);
+    rawA=analogValue;
+    moistureA = map(analogValue, 24, 1023, 0, 100);
     DEBUG_PRINT("\tA3:");
     DEBUG_PRINT(analogValue);    
     analogValue=32000;
