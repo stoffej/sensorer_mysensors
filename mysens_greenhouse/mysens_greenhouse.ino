@@ -32,7 +32,7 @@
 #define CHILD_ID_RELAY 3
 #define CHILD_ID_SOILA 8
 #define CHILD_ID_SOILB 9
-#define CHILD_ID_SOILC 10
+//#define CHILD_ID_SOILC 10
 
 #define DHT_UPDATE_INTERVAL  4000 // in milliseconds
 #define WATER_PUMP_TIMEOUT   5000 // 
@@ -47,7 +47,7 @@ MyMessage msgRelay(CHILD_ID_RELAY, V_STATUS);
 
 MyMessage msgSoilA(CHILD_ID_SOILA, V_LEVEL);  
 MyMessage msgSoilB(CHILD_ID_SOILB, V_LEVEL);  
-MyMessage msgSoilC(CHILD_ID_SOILC, V_LEVEL);  
+//MyMessage msgSoilC(CHILD_ID_SOILC, V_LEVEL);  
 
 
 /* for clock */
@@ -62,7 +62,7 @@ float temperature = 255;
 uint16_t lux = 65535 ;
 int moistureA = 32000; 
 int moistureB = 32000;
-int moistureC = 32000;
+//int moistureC = 32000;
 
 
 enum State {
@@ -119,7 +119,7 @@ void setup()
    lcd.createChar(2, smiley);   
   
    dht.setup(5); // data pin 5
-
+   analogReference(DEFAULT);
   //
   lcd.setCursor(0, 0);
   lcd.print(F(" Getting Time..  "));
@@ -162,7 +162,7 @@ void presentation()
   present(CHILD_ID_RELAY, S_SPRINKLER);
   present(CHILD_ID_SOILA, S_MOISTURE);
   present(CHILD_ID_SOILB, S_MOISTURE);
-  present(CHILD_ID_SOILC, S_MOISTURE);
+//  present(CHILD_ID_SOILC, S_MOISTURE);
  
   metric = getControllerConfig().isMetric;
 }
@@ -263,7 +263,7 @@ void sendMsg(void)
           break;        
       case msgSendSoilC:
           msgSend = msgSendRelay;    
-          send(msgSoilC.set(moistureC),0);        
+//          send(msgSoilC.set(moistureC),0);        
           lastMsgSendTime = millis();          
           break;
       case msgSendRelay:
@@ -291,20 +291,27 @@ void readSensors(void)
     lastDHTUpdateTime = millis();
   }
   lux = lightMeter.readLightLevel();
-  if(millis()-lastSoilUpdateTime >= 1000 )
+  if(millis()-lastSoilUpdateTime >= 6000 )
   {
-    int analogValue = analogRead(CHILD_ID_SOILA);
-    moistureA = map(analogValue, 0, 1023, 0, 100);
-    analogValue = 32000;
-    wait(300);
-    analogValue = analogRead(CHILD_ID_SOILB);
-    moistureB = map(analogValue, 0, 1023, 0, 100);
-    analogValue = 32000;
-    wait(300);
-    analogValue = analogRead(CHILD_ID_SOILC);
-    moistureC = map(analogValue, 0, 1023, 0, 100);
-    analogValue = 32000;
+    delay(50);
     lastSoilUpdateTime = millis();
+    DEBUG_PRINT("STOFFE ANALOG");
+    int analogValue = analogRead(3);
+    moistureA = map(analogValue, 0, 1023, 0, 100);
+    DEBUG_PRINT("\tA3:");
+    DEBUG_PRINT(analogValue);    
+    analogValue=32000;
+    delay(50);
+    analogValue = analogRead(1);
+    DEBUG_PRINT("\tB1:");
+    DEBUG_PRINTLN(analogValue);    
+    moistureB = map(analogValue, 0, 1023, 0, 100);
+
+
+
+  //    moistureC = map(analogValue, 0, 1023, 0, 100);
+  //  DEBUG_PRINT("\tC2:");
+  //  DEBUG_PRINT(moistureC);    
   }
 
 }
