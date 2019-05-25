@@ -132,7 +132,7 @@ void setup()
   {
     requestTime();
     DEBUG_PRINTLN(F("Requesting time from Gateway:"));
-    wait(500);
+    wait(600);
     lcd.print(".");
     clockCounter++;
     if (clockCounter > 32)
