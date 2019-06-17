@@ -6,13 +6,14 @@
 #include "DHT.h"
 #include <TimeLib.h>
 
-#define MY_DEBUG      // Enable debug prints to serial monitor
+
 #define MY_RADIO_RF24 // Enable and select radio type attached
 #define MY_NODE_ID 16
-#define DEBUG_ON   // comment out to supress serial monitor output
+//#define DEBUG_ON   // comment out to supress serial monitor output
 #include <MySensors.h>
 
 #ifdef DEBUG_ON
+#define MY_DEBUG      // Enable debug prints to serial monitor mysensors
 #define DEBUG_PRINT(x)   Serial.print(x)
 #define DEBUG_PRINTLN(x) Serial.println(x)
 #else
@@ -23,7 +24,7 @@
 
 #define SKETCH_NAME "Greenhouse"
 #define SKETCH_MAJOR_VER "0"
-#define SKETCH_MINOR_VER "3"
+#define SKETCH_MINOR_VER "4"
 
 
 #define CHILD_ID_HUM 0
@@ -35,7 +36,8 @@
 //#define CHILD_ID_SOILC 10
 
 #define DHT_UPDATE_INTERVAL  4000 // in milliseconds
-#define WATER_PUMP_TIMEOUT   15000 // 
+#define WATER_PUMP_TIMEOUT   1800000UL // 30 minutes in milliseconds
+#define GET_TIME 3600000UL // time request 1 hour
 
 #define RELAY_PIN 7  // Arduino Digital I/O pin number for first relay (second on pin+1 etc)
 
@@ -59,9 +61,9 @@ static unsigned long watchdogTimeout;
 /* default sensor value */
 float humidity = 255;
 float temperature = 255;
-uint16_t lux = 65535 ;
-int moistureA = 32000;
-int moistureB = 32000;
+uint16_t lux = 0 ;
+int moistureA = 0;
+int moistureB = 0;
 //int moistureC = 32000;
 
 int rawA;
@@ -210,9 +212,12 @@ void updateDisplay(void)
     }
     else
     {
+      lcd.print(" ");
       lcd.write(byte(2));    
-      lcd.print("  raw:");
-      lcd.print(rawA);
+      lcd.print("    ");
+      lcd.print(hour());
+      lcd.print(":");   
+      lcd.print(minute());         
     }
     
     lcd.setCursor(0, 1);
@@ -220,10 +225,12 @@ void updateDisplay(void)
     lcd.print((char)223);
     lcd.print(" ");
     lcd.print(moistureA);
-    lcd.print("%");
+    lcd.print("% ");
+    lcd.print(moistureB);
+    lcd.print("%");    
     lcd.print(" ");
     lcd.print(lux);
-       
+    lcd.print("Lx");       
     lastUpdateLcdTime = millis();
   }
 }
@@ -235,7 +242,7 @@ void updateDisplay(void)
 void sendMsg(void)
 {
   static unsigned long lastMsgSendTime;
-  if(millis()-lastMsgSendTime  >= 4000)   
+  if(millis()-lastMsgSendTime  >= 300000UL)   
   {
     switch(msgSend)
     {
@@ -301,15 +308,15 @@ void readSensors(void)
     DEBUG_PRINT("STOFFE ANALOG");
     int analogValue = analogRead(3);
     rawA=analogValue;
-    moistureA = map(analogValue, 24, 1023, 0, 100);
+    moistureA = map(analogValue, 0, 584, 0, 100);
     DEBUG_PRINT("\tA3:");
     DEBUG_PRINT(analogValue);    
     analogValue=32000;
     delay(50);
     analogValue = analogRead(1);
-    DEBUG_PRINT("\tB1:");
+    DEBUG_PRINT("\tA1:");
     DEBUG_PRINTLN(analogValue);    
-    moistureB = map(analogValue, 0, 1023, 0, 100);
+    moistureB = map(analogValue, 0, 578, 0, 100);
 
 
 
@@ -371,7 +378,7 @@ void receive(const MyMessage &message)
 void updateClock(void)
 {
   static unsigned long lastHAGetTime;
-  if (millis() - lastHAGetTime >= 3600000UL) // updates clock time and gets zone times from vera once every hour
+  if (millis() - lastHAGetTime >= GET_TIME) // updates clock time and gets zone times from vera once every hour
   {
     DEBUG_PRINTLN(F("Requesting time and valve data from Gateway..."));
     lcd.setCursor(15, 0);
