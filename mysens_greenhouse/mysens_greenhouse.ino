@@ -24,7 +24,7 @@
 
 #define SKETCH_NAME "Greenhouse"
 #define SKETCH_MAJOR_VER "0"
-#define SKETCH_MINOR_VER "4"
+#define SKETCH_MINOR_VER "5"
 
 
 #define CHILD_ID_HUM 0
@@ -65,7 +65,7 @@ uint16_t lux = 0 ;
 int moistureA = 0;
 int moistureB = 0;
 //int moistureC = 32000;
-
+int relay_state=0; //default is off
 int rawA;
 
 enum State {
@@ -74,12 +74,13 @@ enum State {
 
 State state ;
 State lastState;
+bool initialValueSent = false;
 
 /* send next msg type
    To avoid flooding the mysensor network
  */
 enum msgPresent {
-  msgSendTemperature,  msgSendHumidity,  msgSendLux,  msgSendSoilA,  msgSendSoilB,  msgSendSoilC,  msgSendRelay
+  msgSendTemperature,  msgSendHumidity,  msgSendLux,  msgSendSoilA,  msgSendSoilB, msgSendRelay
 };
 
 msgPresent msgSend = msgSendTemperature;
@@ -92,13 +93,12 @@ byte smiley[8] = { B00000,  B10001,  B00000,  B00000,  B10001,  B01110,  B00000,
 
 DHT dht; //DHT22 på pinne 5
 
-int relay_state;
+
 
 void before()
 {
   pinMode(RELAY_PIN, OUTPUT);
-  // Set relay to last known state (using eeprom storage)
-  digitalWrite(RELAY_PIN, loadState(CHILD_ID_RELAY)?1:0);
+  digitalWrite(RELAY_PIN, relay_state);
 }
 
 void setup()
@@ -148,10 +148,6 @@ void setup()
       break;
     }
   }
-  
-  send(msgPrefix.set("lux"));        //light sensor setup for home assistant... unit presented is lux
-  relay_state=loadState(CHILD_ID_RELAY);
-  send(msgRelay.set(relay_state),relay_state);
 }
 
 void presentation() 
@@ -160,18 +156,29 @@ void presentation()
   sendSketchInfo(SKETCH_NAME, SKETCH_MAJOR_VER "." SKETCH_MINOR_VER);
 
   present(CHILD_ID_LIGHT, S_LIGHT);
+  wait(500);
   present(CHILD_ID_HUM, S_HUM);
+  wait(500);  
   present(CHILD_ID_TEMP, S_TEMP);
-  present(CHILD_ID_RELAY, S_SPRINKLER);
+  wait(500);  
+  present(CHILD_ID_RELAY, S_BINARY);
+  wait(500);  
   present(CHILD_ID_SOILA, S_MOISTURE);
+  wait(500);  
   present(CHILD_ID_SOILB, S_MOISTURE);
-//  present(CHILD_ID_SOILC, S_MOISTURE);
  
   metric = getControllerConfig().isMetric;
 }
 
 void loop() 
 {
+  if (!initialValueSent) {
+    Serial.println("Sending initial value");
+    send(msgRelay.set(relay_state),0);
+    Serial.println("Requesting initial value from controller");
+    request(CHILD_ID_RELAY, V_STATUS);
+    wait(2000, C_SET, V_STATUS);
+  }
   updateClock();
   readSensors();
   sendMsg();
@@ -188,13 +195,13 @@ void setRelay(int value)
     state = Watering;
     digitalWrite(RELAY_PIN, HIGH );
     watchdogTimeout=millis();
-    send(msgRelay.set(relay_state),relay_state);
+    send(msgRelay.set(relay_state),0);
   }
   else
   {
     state = Idle;
     digitalWrite(RELAY_PIN, LOW );
-    send(msgRelay.set(relay_state),relay_state);    
+    send(msgRelay.set(relay_state),0);    
   }
 }
 
@@ -236,50 +243,37 @@ void updateDisplay(void)
 }
 
 
-
-
-
 void sendMsg(void)
 {
-  static unsigned long lastMsgSendTime;
-  if(millis()-lastMsgSendTime  >= 300000UL)   
+  static int lastMinuteSendTime=0;
+  if(minute() != lastMinuteSendTime)
   {
+    lastMinuteSendTime = minute();
     switch(msgSend)
     {
       case msgSendTemperature:
           send(msgTemp.set(temperature, 0));
           msgSend = msgSendHumidity;
-          lastMsgSendTime = millis();
           break;
       case msgSendHumidity:
           msgSend = msgSendLux;    
           send(msgHum.set(humidity, 0));
-          lastMsgSendTime = millis();
           break;        
       case msgSendLux:
           msgSend = msgSendSoilA;    
-          send(msgLight.set(lux));   
-          lastMsgSendTime = millis();               
+          send(msgLight.set(lux),0);   
           break;        
       case msgSendSoilA:
           msgSend = msgSendSoilB;    
           send(msgSoilA.set(moistureA),0);
-          lastMsgSendTime = millis();          
           break;        
       case msgSendSoilB:
-          msgSend = msgSendSoilC;    
-          send(msgSoilB.set(moistureB),0);
-          lastMsgSendTime = millis();          
-          break;        
-      case msgSendSoilC:
           msgSend = msgSendRelay;    
-//          send(msgSoilC.set(moistureC),0);        
-          lastMsgSendTime = millis();          
-          break;
+          send(msgSoilB.set(moistureB),0);
+          break;        
       case msgSendRelay:
           msgSend = msgSendTemperature;    
           send(msgRelay.set(relay_state),0);        
-          lastMsgSendTime = millis();          
           break;        
       default:
           DEBUG_PRINTLN(F("STOFFE Error in msgSend enum"));
@@ -288,9 +282,9 @@ void sendMsg(void)
   }
 }
 
+
 void readSensors(void)
 {
-
   /* for DHT sensor*/
   static unsigned long lastDHTUpdateTime=0;
   static unsigned long lastSoilUpdateTime=0;
@@ -303,7 +297,7 @@ void readSensors(void)
   lux = lightMeter.readLightLevel();
   if(millis()-lastSoilUpdateTime >= 6000 )
   {
-    delay(50);
+    wait(50);
     lastSoilUpdateTime = millis();
     DEBUG_PRINT("STOFFE ANALOG");
     int analogValue = analogRead(3);
@@ -312,13 +306,11 @@ void readSensors(void)
     DEBUG_PRINT("\tA3:");
     DEBUG_PRINT(analogValue);    
     analogValue=32000;
-    delay(50);
+    wait(50);
     analogValue = analogRead(1);
     DEBUG_PRINT("\tA1:");
     DEBUG_PRINTLN(analogValue);    
     moistureB = map(analogValue, 0, 578, 0, 100);
-
-
 
   //    moistureC = map(analogValue, 0, 1023, 0, 100);
   //  DEBUG_PRINT("\tC2:");
@@ -363,16 +355,17 @@ void receive(const MyMessage &message)
       Serial.print("STOFFE ......... receive ");
     // We only expect one type of message from controller. But we better check anyway.
     if (message.type==V_STATUS) {
-        // Change relay state
-        if(relay_state != message.getInt())
-        {
-          setRelay(message.getInt());          
-          // Write some debug info
-          Serial.print(", New status: ");
-          Serial.println(message.getInt() );
-          Serial.print("message=");
-          Serial.println(message.sensor);
+       if (!initialValueSent) {
+          Serial.println("Receiving initial value from controller");
+          initialValueSent = true;
         }
+        // Change relay state
+        setRelay(message.getInt());          
+        // Write some debug info
+        Serial.print(", New status: ");
+        Serial.println(message.getInt() );
+        Serial.print("message=");
+        Serial.println(message.sensor);
      }
 }
 void updateClock(void)
